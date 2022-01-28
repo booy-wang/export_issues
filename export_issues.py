@@ -21,14 +21,21 @@ def countdown(sec):
     print('ok')
 
 
+def get_current_time():
+    # todo: You can change the url if you use GitHub Enterprise or other servers
+    github_time = requests.get('https://api.github.com').headers['Date']  # Use https://*.github.com to get current server time.
+    return time.strptime(github_time, '%a, %d %b %Y %H:%M:%S GMT')
+
+
 def check_remaining():
     remain_cnt = g.get_rate_limit().core.remaining
     print('remain: %d' % remain_cnt)
     if remain_cnt < 500:  # todo: use param?
         reset_time = g.get_rate_limit().core.reset
-        print('wait until: %s' % reset_time.strftime('%Y-%m-%d %H:%M:%S'))
-        print('current time: %s' % datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
-        wait_time = (reset_time - datetime.utcnow()).seconds
+        cur_time = get_current_time()
+        print('wait until: %s' % reset_time.strftime('%Y-%m-%d %H:%M:%S UTC'))
+        print('current time: %s' % time.strftime('%Y-%m-%d %H:%M:%S UTC', cur_time))
+        wait_time = int(reset_time.timestamp() - time.mktime(cur_time))  # accurate to second is enough
         print('wait %d seconds until reset...' % wait_time)
         countdown(wait_time)
 
