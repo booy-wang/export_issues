@@ -6,6 +6,7 @@ import sys
 import time
 from datetime import datetime
 
+import requests
 from github import Github
 
 if platform.python_version_tuple()[0] == '2':
