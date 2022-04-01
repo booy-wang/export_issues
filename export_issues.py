@@ -4,7 +4,6 @@ import csv
 import platform
 import sys
 import time
-from datetime import datetime
 
 import requests
 from github import Github
@@ -47,12 +46,11 @@ def get_all_issues():
     with open('issues.csv', 'w', newline='', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
         # todo: use friendly col name?
-        writer.writerow(['id', 'number', 'title', 'labels', 'milestone', 'state', 'closed_by', 'assignees', 'closed_at',
+        writer.writerow(['id', 'number', 'title', 'labels', 'milestone', 'state', 'assignees', 'closed_at',
                          'created_at', 'last_modified', 'updated_at'])
         total = issues.totalCount
         cnt = 0
         print('Writing to issues.csv.....')
-        check_remaining()
         for issue in issues:
             cnt += 1
             tmp_label = []
@@ -61,17 +59,19 @@ def get_all_issues():
                 tmp_label.append(l.name)
             for an in issue.assignees:
                 if an:
-                    tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
+                    # tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
+                    tmp_an.append(an.login)
                 else:
                     tmp_an.append('')
-            c_b = '' # bad var name, but I'm too lazy...
+            # c_b = ''  # bad var name, but I'm too lazy...
             i_m = ''
-            if issue.closed_by:
-                c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
+            # if issue.closed_by:
+            #     # c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
+            #     c_b = issue.closed_by.login
             if issue.milestone:
                 i_m = issue.milestone.title
-            if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
-                check_remaining()
+            # if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
+            #     check_remaining()
             print('getting issue %d\t %d/%d' % (issue.number, cnt, total))
             line = [issue.id,
                     issue.number,
@@ -79,7 +79,6 @@ def get_all_issues():
                     ','.join(tmp_label),
                     i_m,
                     issue.state,
-                    c_b,
                     ','.join(tmp_an),
                     issue.closed_at,
                     issue.created_at,
@@ -89,20 +88,21 @@ def get_all_issues():
     return issue_list
 
 
-try:
-    # todo: use args?
-    g = Github('your access_token here')
-    repos = g.get_user().get_repos()
-    for repo in repos:
-        if repo.full_name == 'org_name/repo_name':
-            list_numbers = []
-            list_select = []
+if __name__ == '__main__':
+    try:
+        # todo: use args?
+        g = Github('your access_token here')
+        repos = g.get_user().get_repos()
+        for repo in repos:
+            if repo.full_name == 'org_name/repo_name':
+                list_numbers = []
+                list_select = []
 
-            print('Retrieving issues......')
-            get_all_issues()
+                print('Retrieving issues......')
+                get_all_issues()
 
-    print('====Completed!====')
-    input('Press Enter to quit...')
-except Exception as e:
-    print("ERROR: ", e)
-    input('Press Enter to quit...')
+        print('====Completed!====')
+        input('Press Enter to quit...')
+    except Exception as e:
+        print("ERROR: ", e)
+        input('Press Enter to quit...')
