@@ -4,7 +4,9 @@ import csv
 import platform
 import sys
 import time
+from datetime import datetime
 
+import github
 import requests
 from github import Github
 
@@ -23,14 +25,15 @@ def countdown(sec):
 
 def get_current_time():
     # todo: You can change the url if you use GitHub Enterprise or other servers
-    github_time = requests.get('https://api.github.com').headers['Date']  # Use https://*.github.com to get current server time.
+    github_time = requests.get('https://api.github.com').headers[
+        'Date']  # Use https://*.github.com to get current server time.
     return time.strptime(github_time, '%a, %d %b %Y %H:%M:%S GMT')
 
 
 def check_remaining():
     remain_cnt = g.get_rate_limit().core.remaining
     print('remain: %d' % remain_cnt)
-    if remain_cnt < 500:  # todo: use param?
+    if remain_cnt < 50:  # todo: use param?
         reset_time = g.get_rate_limit().core.reset
         cur_time = get_current_time()
         print('wait until: %s' % reset_time.strftime('%Y-%m-%d %H:%M:%S UTC'))
@@ -40,17 +43,22 @@ def check_remaining():
         countdown(wait_time)
 
 
-def get_all_issues():
+def get_all_issues(state, milestone_number):
     issue_list = []
-    issues = repo.get_issues(state='all')
+    if milestone_number == '*':
+        ms = '*'
+    else:
+        ms = repo.get_milestone(int(milestone_number))
+    issues = repo.get_issues(state=state, milestone=ms)
     with open('issues.csv', 'w', newline='', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
         # todo: use friendly col name?
-        writer.writerow(['id', 'number', 'title', 'labels', 'milestone', 'state', 'assignees', 'closed_at',
+        writer.writerow(['id', 'number', 'title', 'labels', 'milestone', 'state', 'closed_by', 'assignees', 'closed_at',
                          'created_at', 'last_modified', 'updated_at'])
         total = issues.totalCount
         cnt = 0
         print('Writing to issues.csv.....')
+        check_remaining()
         for issue in issues:
             cnt += 1
             tmp_label = []
@@ -59,19 +67,17 @@ def get_all_issues():
                 tmp_label.append(l.name)
             for an in issue.assignees:
                 if an:
-                    # tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
-                    tmp_an.append(an.login)
+                    tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
                 else:
                     tmp_an.append('')
-            # c_b = ''  # bad var name, but I'm too lazy...
+            c_b = ''  # bad var name, but I'm too lazy...
             i_m = ''
-            # if issue.closed_by:
-            #     # c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
-            #     c_b = issue.closed_by.login
+            if issue.closed_by:
+                c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
             if issue.milestone:
                 i_m = issue.milestone.title
-            # if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
-            #     check_remaining()
+            if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
+                check_remaining()
             print('getting issue %d\t %d/%d' % (issue.number, cnt, total))
             line = [issue.id,
                     issue.number,
@@ -79,6 +85,7 @@ def get_all_issues():
                     ','.join(tmp_label),
                     i_m,
                     issue.state,
+                    c_b,
                     ','.join(tmp_an),
                     issue.closed_at,
                     issue.created_at,
@@ -88,21 +95,22 @@ def get_all_issues():
     return issue_list
 
 
-if __name__ == '__main__':
-    try:
-        # todo: use args?
-        g = Github('your access_token here')
-        repos = g.get_user().get_repos()
-        for repo in repos:
-            if repo.full_name == 'org_name/repo_name':
-                list_numbers = []
-                list_select = []
+try:
+    # todo: use args?
+    g = Github('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')
+    repos = g.get_user().get_repos()
+    state = input('Please input state(all/open/closed):')
+    milestone_number = input("Please input milestone number(475 or *):")
+    for repo in repos:
+        if repo.full_name == 'ArcGIS/I18N-BYS-Bugs':
+            list_numbers = []
+            list_select = []
 
-                print('Retrieving issues......')
-                get_all_issues()
+            print('Retrieving issues......')
+            get_all_issues(state, milestone_number)
 
-        print('====Completed!====')
-        input('Press Enter to quit...')
-    except Exception as e:
-        print("ERROR: ", e)
-        input('Press Enter to quit...')
+    print('====Completed!====')
+    input('Press Enter to quit...')
+except Exception as e:
+    print("ERROR: ", e)
+    input('Press Enter to quit...')
