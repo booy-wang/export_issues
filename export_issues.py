@@ -43,71 +43,73 @@ def check_remaining():
         countdown(wait_time)
 
 
-def get_all_issues(state, milestone_number):
+def get_all_issues(state, milestone_number_list):
     issue_list = []
-    if milestone_number == '*':
-        ms = '*'
-    else:
-        ms = repo.get_milestone(int(milestone_number))
-    issues = repo.get_issues(state=state, milestone=ms)
+
     with open('issues.csv', 'w', newline='', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
-        # todo: use friendly col name?
         writer.writerow(['id', 'number', 'title', 'labels', 'milestone', 'state', 'closed_by', 'assignees', 'closed_at',
-                         'created_at', 'last_modified', 'updated_at'])
-        total = issues.totalCount
-        cnt = 0
-        print('Writing to issues.csv.....')
-        check_remaining()
-        for issue in issues:
-            cnt += 1
-            tmp_label = []
-            tmp_an = []
-            for l in issue.labels:
-                tmp_label.append(l.name)
-            for an in issue.assignees:
-                if an:
-                    tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
-                else:
-                    tmp_an.append('')
-            c_b = ''  # bad var name, but I'm too lazy...
-            i_m = ''
-            if issue.closed_by:
-                c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
-            if issue.milestone:
-                i_m = issue.milestone.title
-            if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
-                check_remaining()
-            print('getting issue %d\t %d/%d' % (issue.number, cnt, total))
-            line = [issue.id,
-                    issue.number,
-                    issue.title,
-                    ','.join(tmp_label),
-                    i_m,
-                    issue.state,
-                    c_b,
-                    ','.join(tmp_an),
-                    issue.closed_at,
-                    issue.created_at,
-                    issue.last_modified,
-                    issue.updated_at]
-            writer.writerow(line)
+                         'created_at', 'last_modified', 'updated_at', 'body'])
+        for milestone_number in milestone_number_list:
+            if milestone_number == '*':
+                ms = '*'
+            else:
+                ms = repo.get_milestone(int(milestone_number))
+            issues = repo.get_issues(state=state, milestone=ms)
+            total = issues.totalCount
+            cnt = 0
+            print('Writing to issues.csv.....')
+            check_remaining()
+            for issue in issues:
+                cnt += 1
+                tmp_label = []
+                tmp_an = []
+                for l in issue.labels:
+                    tmp_label.append(l.name)
+                for an in issue.assignees:
+                    if an:
+                        tmp_an.append('%s<%s>' % (an.login, (an.name or an.login)))
+                    else:
+                        tmp_an.append('')
+                c_b = ''  # bad var name, but I'm too lazy...
+                i_m = ''
+                if issue.closed_by:
+                    c_b = '%s<%s>' % (issue.closed_by.login, (issue.closed_by.name or issue.closed_by.login))
+                if issue.milestone:
+                    i_m = issue.milestone.title
+                if cnt % 20 == 0:  # todo: check remaining every 20 issues. need customization？
+                    check_remaining()
+                print('getting issue %d\t %d/%d' % (issue.number, cnt, total))
+                line = [issue.id,
+                        issue.number,
+                        issue.title,
+                        ','.join(tmp_label),
+                        i_m,
+                        issue.state,
+                        c_b,
+                        ','.join(tmp_an),
+                        issue.closed_at,
+                        issue.created_at,
+                        issue.last_modified,
+                        issue.updated_at,
+                        issue.body]
+                writer.writerow(line)
     return issue_list
 
 
 try:
     # todo: use args?
-    g = Github('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')
+    g = Github('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')
     repos = g.get_user().get_repos()
     state = input('Please input state(all/open/closed):')
-    milestone_number = input("Please input milestone number(475 or *):")
+    milestone_number_list = input("Please input milestone number, (such as: '475 455 423', Separate with spaces):").split(' ')
     for repo in repos:
         if repo.full_name == 'ArcGIS/I18N-BYS-Bugs':
             list_numbers = []
             list_select = []
 
             print('Retrieving issues......')
-            get_all_issues(state, milestone_number)
+            get_all_issues(state, milestone_number_list)
 
     print('====Completed!====')
     input('Press Enter to quit...')
